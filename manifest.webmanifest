@@ -1,0 +1,35 @@
+{
+ "name": "Football Imperium Manager",
+ "short_name": "FIM 27",
+ "description": "Fußballmanager mit Stadionviertel, Immobilien und Geldanlagen.",
+ "lang": "de",
+ "start_url": "./",
+ "scope": "./",
+ "id": "./",
+ "display": "standalone",
+ "orientation": "portrait",
+ "background_color": "#1a3151",
+ "theme_color": "#1a3151",
+ "categories": [
+  "games",
+  "sports"
+ ],
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}

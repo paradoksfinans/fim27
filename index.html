@@ -5264,7 +5264,7 @@ function hlOpen(H,kits,title,info,cb){
  HL.pan={x:0,z:0};HL.pinch=null;HL.panS=null;HL.zoom=clamp((typeof S!=='undefined'&&S&&S.zoom)||1,.45,2.4);HL.all=!!(typeof S!=='undefined'&&S&&S.camAll);zoomUI();
  if(HL.use3){r3Build(H);clothReset();R3.fit.ok=false;qualStart();if(H.pen){R3.cl.set(34,1.1,.5);R3.cp.set(34,1.1+3.1*HL.zoom,.5+19*HL.zoom)}else{const f=camFit(H);Object.assign(R3.fit,f,{ok:true});const o=camPose(f.x,f.z,clamp(f.d*HL.zoom,9,95),R3.fo);R3.cp.copy(o.pos);R3.cl.copy(o.look)}for(const n of R3.nets){n.hits=[];n.active=true}netUpdate(performance.now())}
  HL.tipScene=(HL.tipN=(HL.tipN||0)+1)<=3;
- if(HL.use3)setDay(!!H.training||(S&&S.user!=null&&utier()>pyP(U().nat)+2&&!(S.am&&S.am.g.fl&&S.evi%2)));
+ if(HL.use3)setDay(!!H.training||(S&&S.user!=null&&utier()>pyP(U().nat)+2&&!(S.am&&S.am.g.fl&&S.evi%2)));amDayFix(!!H.training);
  hlUI();if(!H.training)SND.ambient(true);
  if(H.pen)hlMsg('Elfmeter!',1);
  cancelAnimationFrame(HL.raf);HL.last=performance.now();HL.raf=requestAnimationFrame(hlLoop);
@@ -9097,7 +9097,7 @@ Object.assign(ACT,{simSeasonAsk:()=>{UI.simAsk=true;render()},simSeasonNo:()=>{U
 
 /* v57: stability. Graphics steps for every 3D view, automatic backups of the save (IndexedDB), save and load as a file,
    a guard when the save can not be written or read, and an error log the player can share. Nothing is sent anywhere. */
-const FIMV='68';
+const FIMV='69';
 /* ---------- error log ---------- */
 const ERRK='fim-errlog';
 function errGet(){try{const a=JSON.parse(localStorage.getItem(ERRK));return Array.isArray(a)?a:[]}catch(e){return[]}}
@@ -10991,6 +10991,13 @@ function amPaperCard(){if(!S.am||!isAm()||!S.am.zt.length)return'';const L=S.am.
 /* ---- season summary ---- */
 function amSumHtml(s){let h='';if(s.py&&s.py.k==='up'&&!s.title)h+=`<div class="btnrow v3go"><button class="btn big" data-act="v3" data-w="party" data-k="lg">Aufstiegsfeier in 3D</button></div>`;
  if(s.am&&s.am.length)h+=sec('Verein','',`<ul class="news">${s.am.map(x=>`<li class="c"><span>${esc(x)}</span></li>`).join('')}</ul>`);return h}
+
+/* v69 · fixes: amateur cup opponents get a real squad before the match (no empty pitch, no frozen match);
+   daylight amateur games show neither training cones nor an emptied crowd */
+function amMatUser(l){try{for(const x of l||[]){const m=x&&x.m;if(!m)continue;if(m.h===S.user||m.a===S.user){const h=C(m.h),a=C(m.a);if(h&&h.lz)matSq(h);if(a&&a.lz)matSq(a)}}}catch(e){}return l}
+{const co=collect;collect=function(ev){return amMatUser(co(ev))}}
+{const om=openMatch;openMatch=function(d,done){try{const m=d&&d.m;if(m){const h=C(m.h),a=C(m.a);if(h&&h.lz)matSq(h);if(a&&a.lz)matSq(a)}}catch(e){}return om(d,done)}}
+function amDayFix(tr){if(tr||!R3.ok)return;if(R3.cones)R3.cones.visible=false;const C=R3.crowd;if(C&&R3.day){C.tm.visible=C.hm.visible=C.sm.visible=true}}
 
 /* ---------- boot ---------- */
 function boot(data){S=(data&&data.S)||load();if(!S)S=newWorld();render()}

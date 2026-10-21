@@ -9081,7 +9081,7 @@ Object.assign(ACT,{simSeasonAsk:()=>{UI.simAsk=true;render()},simSeasonNo:()=>{U
 
 /* v57: stability. Graphics steps for every 3D view, automatic backups of the save (IndexedDB), save and load as a file,
    a guard when the save can not be written or read, and an error log the player can share. Nothing is sent anywhere. */
-const FIMV='66';
+const FIMV='67';
 /* ---------- error log ---------- */
 const ERRK='fim-errlog';
 function errGet(){try{const a=JSON.parse(localStorage.getItem(ERRK));return Array.isArray(a)?a:[]}catch(e){return[]}}
@@ -10223,7 +10223,7 @@ const PYCOL=[['#E30613','#FFFFFF'],['#0055A4','#FFFFFF'],['#00A650','#FFFFFF'],[
 const PYG={};
 function pyGeo(code){if(PYG[code])return PYG[code];return PYG[code]=(GEO[code]||'').split('\n').filter(Boolean).map((l,i)=>{const [n,s,g,b,d,t]=l.split('|');return{i,n,s,g,b,d:(d||'').split(',').filter(Boolean),t:(t||'').split(',').filter(Boolean)}})}
 const pyCode=nat=>NATIONS[nat]&&NATIONS[nat].c;
-const pyHas=nat=>nat<Math.min(12,NN())&&!!PYD[pyCode(nat)];
+const pyHas=nat=>nat<NN()&&!!PYD[pyCode(nat)];
 const pyP=nat=>pyHas(nat)?1+PYD[pyCode(nat)].t.length:1;               // national tiers incl. the top league
 const pyT=nat=>pyHas(nat)?pyP(nat)+PYD[pyCode(nat)].r.length:1;         // all tiers
 const AMS=()=>TT()>10?10:8;                                              // clubs in a regional league
@@ -10250,9 +10250,9 @@ function pyUsed(){const s=new Set();for(const c of S.clubs)if(!c.gone)s.add(c.na
 function pyAb(name,pre){const w=name.replace(/['’.]/g,'').split(/[\s-]+/).filter(x=>x&&!/^[0-9]+$/.test(x)&&!(pre||[]).includes(x));let a=w.length>=3?w.slice(0,3).map(x=>x[0]).join(''):w.length===2?w[0][0]+w[1].slice(0,2):(w[0]||'FC').slice(0,3);return a.toUpperCase()}
 function pyName(code,place,used,wal){const D=PYD[code];for(let t=0;t<14;t++){let n;const pre=wal&&D.preF?D.preF:D.pre;
   if(code==='TUR'){const p=pick(D.post);n=p==='spor'?place.replace(/\s+/g,'')+'spor':place+' '+p}
-  else if(code==='ENG'||code==='SCO')n=Math.random()<.12&&D.pre.length?pick(D.pre)+' '+place:place+' '+pick(D.post);
+  else if(code==='ENG'||code==='SCO'||code==='IRL')n=Math.random()<.12&&D.pre.length?pick(D.pre)+' '+place:place+' '+pick(D.post);
   else if(code==='GRE'||code==='AUT'||code==='GER'||code==='ESP'||code==='FRA'||code==='POR'||code==='BEL'){n=pick(pre)+' '+place;if(D.post.length&&Math.random()<.15)n=place+' '+pick(D.post)}
-  else{n=Math.random()<.7||!D.post.length?pick(pre)+' '+place:place+' '+pick(D.post)}
+  else{n=pre.length&&(Math.random()<.7||!D.post.length)?pick(pre)+' '+place:place+' '+pick(D.post)}
   if(D.yr&&D.yr.length&&Math.random()<.32)n+=' '+pick(D.yr);
   if(t>8)n+=' '+(t-7);
   if(!used.has(n)){used.add(n);return n}}
@@ -10273,12 +10273,12 @@ function pyPlaces(code,ci,sc){const G=pyGeo(code),c=G[ci],L=[],add=a=>{for(const
 function pyPick(code,ci,sc,n){const order=['c','c2','b','s','g','all'],used=S._pyUsed||(S._pyUsed=pyUsed());let out=[],i=Math.max(0,order.indexOf(sc));
  const taken=new Set();while(out.length<n&&i<order.length){const pool=order[i]==='all'?pyGeo(code).flatMap(x=>[x.n,...x.t]):pyPlaces(code,ci,order[i]);for(const p of shuffle(pool.slice())){if(out.length>=n)break;if(taken.has(p))continue;taken.add(p);out.push(p)}i++}
  while(out.length<n)out.push(pick(pyGeo(code)).n);return out}
-const pyWal=(code,ci)=>code==='BEL'&&(pyGeo(code)[ci]||{}).g==='Wallonie-Bruxelles';
+const pyWal=(code,ci)=>{const D=PYD[code];return!!(D&&D.fr&&D.fr.includes((pyGeo(code)[ci]||{}).g))};
 
 /* ---- building the pyramid ---- */
-function pyInit(){if(S.py)return;S.py={v:1,L:[],ch:null};S._pyUsed=null;const n=Math.min(12,NN());
- for(let nat=0;nat<n;nat++){if(!pyHas(nat))continue;const code=pyCode(nat),D=PYD[code],tt=TT(),more=(typeof MORE!=='undefined'&&MORE[code])||[],have=new Set(S.clubs.map(c=>c.name));
-  let pool=(tt<=10?more.slice(0,Math.max(0,8)):[]).concat(PRO[code]||[]).filter(x=>!have.has(x[0]));
+function pyInit(){if(!S.py)S.py={v:1,L:[],ch:null};S._pyUsed=null;const n=NN();
+ for(let nat=0;nat<n;nat++){if(!pyHas(nat)||S.py.L.some(L=>L.nat===nat))continue;const code=pyCode(nat),D=PYD[code],tt=TT(),more=(typeof MORE!=='undefined'&&MORE[code])||[],have=new Set(S.clubs.map(c=>c.name));
+  let pool=(tt<=10?more.slice(0,8):[]).concat(NATIONS[nat].clubs.slice(tt),PRO[code]||[]).filter((x,i,a)=>!have.has(x[0])&&a.findIndex(y=>y[0]===x[0])===i);
   D.t.forEach((name,j)=>{const tier=j+2,q=pyQ(nat,tier),ids=[];
    for(let k=0;k<tt;k++){const d=pool.shift();let c;
     if(d){c={id:S.clubs.length,name:d[0],ab:d[1],c1:d[2],c2:d[3],pat:d[4]||'p',nat,q:+(q+3-k*(6/tt)+rnd(-1.2,1.2)).toFixed(1),sq:[],ch:[0,0,0,0,0],tier,lz:1};S.clubs.push(c)}
@@ -10307,7 +10307,7 @@ function pyMat(){const li=ULI(),mine=new Set(S.lg[li]?S.lg[li].ids:[]);
 function pyMove(){if(!S.py)return null;const tab={},out=[],uid=S.user,ut0=utier(),uli0=ULI(),k=TT()>10?3:2;
  for(let i=0;i<S.lg.length;i++){const lg=S.lg[i];tab[i<NN()?'top:'+i:lg.pk]=table(lg.ids,lg.fx.flat()).map(r=>r.id)}
  const gone=new Set();S._pyUsed=null;S._pyFree=null;for(const c of S.clubs)if(isTop(c))c.wasTop=1;
- for(let nat=0;nat<Math.min(12,NN());nat++){if(!pyHas(nat))continue;const code=pyCode(nat),P=pyP(nat);
+ for(let nat=0;nat<NN();nat++){if(!pyHas(nat))continue;const code=pyCode(nat),P=pyP(nat);
   const chain=[{k:'top:'+nat,tier:1,top:true,ids:S.clubs.filter(c=>c.nat===nat&&isTop(c)).map(c=>c.id)}].concat(S.py.L.filter(L=>L.nat===nat).sort((a,b)=>a.tier-b.tier));
   // the user drops out of the lowest national tier and there is no regional league yet: his home town gets one
   const lowN=chain.filter(L=>L.tier<=P).pop(),ut=tab[lowN.k]||[];
@@ -10349,7 +10349,7 @@ function pyLeagueName(c){if(isTop(c))return NATIONS[c.nat].lg;const L=S.py.L.fin
 function pyEnsure(){if(!S||S.user==null||S.py)return;pyInit();pyBuild();pyMat();
  // a save from before: the new leagues catch up the match days already played
  const n=leaguePlayed();for(let md=0;md<n;md++)for(let i=NN();i<S.lg.length;i++)for(const m of S.lg[i].fx[md]||[])if(m.hg==null)simMatch({m,comp:'L',n:i});S.lgS=S.season}
-{const ss=startSeason;startSeason=function(P){if(!S.py)pyInit();let mv=null;if(S.lgS===S.season-1&&S.lg&&S.lg.length>NN())mv=pyMove();
+{const ss=startSeason;startSeason=function(P){pyInit();let mv=null;if(S.lgS===S.season-1&&S.lg&&S.lg.length>NN())mv=pyMove();
  const t0=utier();ss(P);pyBuild();pyMat();S.lgS=S.season;setTarget();
  // the club sponsor pays what a club of this level gets
  if(utier()>1){const a=S.fin.in['Sponsor']||0,b=prizeR(a*TF(utier()));S.money-=a-b;S.fin.in['Sponsor']=b}
@@ -10404,7 +10404,7 @@ function pyLeagueView(li){const lg=S.lg[li],L=pyL(lg.pk);if(!L)return'';const t=
 {const vl=vLiga;vLiga=function(){const ni=UI.nat??U().nat;
  if(UI.lgK==null&&UI.nat==null&&utier()>1){const lg=S.lg[ULI()];if(lg&&lg.pk)UI.lgK=lg.pk}
  const T=pyTierList(ni),sel=UI.lgK&&T.some(t=>t.k===UI.lgK)?UI.lgK:'top',chips=pyTierChips(ni,sel);
- if(sel==='top'){const h=vl(),i=h.indexOf('</div>')+6;return h.slice(0,i)+chips+h.slice(i)}
+ if(sel==='top'){const h=vl(),k=h.indexOf('<div class="chips scroll">'),i=h.indexOf('</div>',Math.max(0,k))+6;return h.slice(0,i)+chips+h.slice(i)}
  const t=T.find(x=>x.k===sel);const h0=`<div class="chips scroll">${LN().map((n,i)=>`<button class="chip ${i===ni?'on':''}" data-act="nat" data-i="${i}">${flag(i)}${n.n}</button>`).join('')}</div>`;
  return h0+chips+(t.li>=0?pyLeagueView(t.li):'<p class="note">Diese Liga beginnt mit der nächsten Saison.</p>')}}
 {const na=ACT.nat;ACT.nat=d=>{UI.lgK=null;UI.pmd=null;return na(d)}}
@@ -10488,6 +10488,207 @@ function acView(){const L=(S.ac||[]).filter(c=>c.sea===S.season);if(!L.length)re
 {const ve=vEuro;vEuro=function(){const h=acView();return h?h+ve():ve()}}
 
 TIPS.liga='Die Tabelle deiner Liga mit allen Ergebnissen. Über die Pyramide siehst du alle Ligen deines Landes – vom Profifußball bis in die Amateurligen.';
+
+/* ---------- v67: the league pyramid for the 18 countries of the expansion ---------- */
+Object.assign(PYD,{
+ SUI:{t:['Challenge League'],r:[['1. Liga','g'],['2. Liga interregional','s'],['2. Liga','b'],['3. Liga','c']],cup:['Regionalcup','c','Kantonalcup','s'],fr:['Gruppe 1'],
+  pre:['FC','SC','SV','FC','BSC','FC Red Star','SC Young Fellows','FC Concordia','FC Blue Stars'],preF:['FC','US','ES','CS','Stade','Racing','AS','FC Étoile'],post:[],yr:['1898','1904','1910','1922','1932','05','09']},
+ DEN:{t:['1. Division'],r:[['2. Division','g'],['Danmarksserien','s'],['Serie 1','b'],['Serie 2','c']],cup:['Lokalpokalen','c','DBU Pokalen','s'],
+  pre:['FC','BK','IK','Boldklubben','B','IF'],post:['IF','BK','Boldklub','FC','B','IK','Fremad'],yr:['1909','1913','1921','93','05']},
+ CZE:{t:['2. Liga Tschechien'],r:[['% fotbalová liga','g'],['Divize','s'],['Krajský přebor','b'],['Okresní přebor','c']],cup:['Okresní pohár','c','Krajský pohár','s'],
+  pre:['SK','FK','TJ','TJ Sokol','Sokol','FC','Spartak','Baník','Slovan','Jiskra','Dynamo','Meteor','Union','Viktoria'],post:[],yr:[]},
+ NOR:{t:['1. divisjon'],r:[['2. divisjon %','g'],['3. divisjon','s'],['4. divisjon','b'],['5. divisjon','c']],cup:['Kretscupen','c','Regionscupen','s'],
+  pre:['IL','SK','FK','IF'],post:['IL','FK','IF','SK','BK','Fotball','Ballklubb','Sportsklubb'],yr:[]},
+ POL:{t:['1. Liga Polen'],r:[['3. Liga','g'],['4. Liga','s'],['Klasa okręgowa','b'],['Klasa A','c']],cup:['Puchar Podokręgu','c','Puchar Polski WZPN','s'],
+  pre:['KS','MKS','GKS','LKS','Sparta','Polonia','Stal','Górnik','Victoria','Unia','Orzeł','Błękitni','Start','Pogoń','Czarni','Granica','Olimpia','Zryw','Hutnik','Kolejarz'],post:[],yr:[]},
+ CRO:{t:['Prva NL'],r:[['Druga NL','g'],['Treća NL','s'],['Županijska liga','b'],['Općinska liga','c']],cup:['Općinski kup','c','Županijski kup','s'],
+  pre:['NK','HNK','NK Mladost','NK Sloga','NK Jedinstvo','NK Polet','NK Croatia','NK Omladinac','NK Graničar','NK Bratstvo','NK Zagorec','NK Lokomotiva'],post:[],yr:[]},
+ UKR:{t:['Persha liha'],r:[['Druha liha','g'],['Amatorska liha','s'],['Oblasna liha','b'],['Miska liha','c']],cup:['Kubok mista','c','Kubok oblasti','s'],
+  pre:['FK','FC','SK','Metalurh','Avanhard','Nyva','Kolos','Zirka','Karpaty','Podillia','Polissia','Enerhiia','Temp','Sokil','Rukh','Lokomotyv'],post:[],yr:[]},
+ SRB:{t:['Prva liga Srbije'],r:[['Srpska liga','g'],['Zona','s'],['Okružna liga','b'],['Opštinska liga','c']],cup:['Opštinski kup','c','Okružni kup','s'],
+  pre:['FK','OFK','FK Radnički','FK Sloga','FK Jedinstvo','FK Mladost','FK Železničar','FK Budućnost','FK Borac','FK Polet','FK Sinđelić','FK Hajduk','FK Graničar','FK Rudar'],post:[],yr:[]},
+ SWE:{t:['Superettan'],r:[['Ettan','g'],['Division 2','s'],['Division 3','b'],['Division 4','c']],cup:['Distriktscup','c','Regionscup','s'],
+  pre:['IFK','IK','BK','FC'],post:['IF','IK','FF','BK','SK','GIF','AIS','BoIS','FK','United'],yr:[]},
+ ISR:{t:['Liga Leumit'],r:[['Liga Alef','g'],['Liga Bet','s'],['Liga Gimel','c']],cup:['Gvia Ezori','c','Gvia HaMedina','s'],
+  pre:['Hapoel','Maccabi','Beitar','Bnei','Ironi','Hakoah','Sektzia','Shimshon','Agudat Sport','Maccabi Ironi','Hapoel Ironi','Elitzur'],post:[],yr:[]},
+ ROU:{t:['Liga 2'],r:[['Liga 3','g'],['Liga 4','s'],['Liga 5','b'],['Liga 6','c']],cup:['Cupa Municipiului','c','Cupa României – faza județeană','s'],
+  pre:['CS','ACS','FC','CSM','Viitorul','Unirea','Progresul','Avântul','Dacia','Olimpia','Victoria','Inter','Sporting','Recolta','Minerul','Metalul','Știința','Gloria'],post:[],yr:[]},
+ HUN:{t:['NB II'],r:[['NB III','g'],['Megyei I','s'],['Megyei II','b'],['Megyei III','c']],cup:['Városi kupa','c','Megyei kupa','s'],
+  pre:[],post:['SE','FC','SC','KSE','VSE','TE','LSE','UFC','SK','Sport'],yr:[]},
+ CYP:{t:['Second Division'],r:[['Third Division','g'],['STOK Elite','s'],['Erasitechniki','c']],cup:['Kypello','c','Kypello STOK','s'],
+  pre:['AEK','Anagennisi','Elpida','Olympos','Achyronas','Digenis','Ethnikos','Akritas','Enosis','Iraklis','Nea Salamis','Apollon','Onisilos','Othellos','Chalkanoras','Spartakos','Omonia','Ermis','PAEEK'],post:[],yr:[]},
+ BUL:{t:['Vtora liga'],r:[['Treta liga','g'],['Oblastna grupa','s'],['A OFG','b'],['B OFG','c']],cup:['Gradska kupa','c','Kupa na AFL','s'],
+  pre:['FK','OFK','PFK','Spartak','Dunav','Maritsa','Chernomorets','Vihar','Svetkavitsa','Sportist','Minyor','Hebar','Rilski Sportist','Benkovski','Levski','Botev','Yantra'],post:[],yr:[]},
+ SVK:{t:['2. liga'],r:[['3. liga','g'],['4. liga','s'],['5. liga','b'],['6. liga','c']],cup:['Okresný pohár','c','Krajský pohár','s'],
+  pre:['FK','MFK','ŠK','TJ','FC','OFK','TJ Slovan','FK Inter','TJ Družstevník','TJ Tatran','FK Spartak','MŠK','TJ Sokol','ŠK Odeva'],post:[],yr:[]},
+ SVN:{t:['2. SNL'],r:[['3. SNL','g'],['Regionalna liga','s'],['Občinska liga','c']],cup:['Občinski pokal','c','Medobčinski pokal','s'],
+  pre:['NK','ND','NK Svoboda','NK Jadran','NK Brinje','NK Rudar','NK Dravograd','NK Tabor','NK Kovinar','NK Partizan'],post:[],yr:[]},
+ IRL:{t:['First Division'],r:[['% Senior League','g'],['Premier Division','s'],['Division One','c']],cup:['Junior Cup','c','Intermediate Cup','s'],
+  pre:['AFC'],post:['United','Celtic','Rovers','Athletic','FC','Town','Wanderers','Villa','Albion','Harps','Boys','Rangers','Hibernians','Corinthians','Swifts'],yr:[]},
+ FIN:{t:['Ykkösliiga'],r:[['Ykkönen','g'],['Kakkonen','s'],['Kolmonen','b'],['Nelonen','c']],cup:['Aluecup','c','Piirinmestaruus','s'],
+  pre:['FC','PK','JK','IF','AC','Pallo'],post:['PS','JK','United','Pallo','Palloseura','IK','Kiisto','Futis'],yr:[]}
+});
+Object.assign(GEO,{
+ SUI:`Genf|Genève|Gruppe 1|Genf|Servette,Carouge,Plainpalais,Eaux-Vives,Pâquis,Champel,Jonction,Petit-Saconnex,Grand-Saconnex|Lancy,Meyrin,Vernier,Onex,Thônex,Versoix
+Lausanne|Vaud|Gruppe 1|Lausanne|La Sallaz,Malley,Prélaz,Bellevaux,Chailly,La Pontaise,Montoie,Sébeillon|Renens,Pully,Morges,Nyon,Vevey,Montreux
+Fribourg|Vaud|Gruppe 1|Fribourg|Beauregard,Schoenberg,Pérolles,Jura,Bourg|Bulle,Marly,Villars-sur-Glâne,Düdingen,Murten
+Bern|Bern|Gruppe 2|Bern|Bümpliz,Breitenrain,Länggasse,Kirchenfeld,Bethlehem,Wankdorf,Wabern,Lorraine,Holligen|Köniz,Ostermundigen,Münsingen,Burgdorf,Biel,Langenthal
+Basel|Nordwestschweiz|Gruppe 2|Basel|Kleinbasel,Gundeldingen,St. Johann,Riehen,Bachletten,Breite,Kleinhüningen,Iselin|Allschwil,Muttenz,Pratteln,Liestal,Birsfelden,Reinach
+Aargau|Nordwestschweiz|Gruppe 2|Aargau|Rohr,Telli,Schachen,Gönhard,Torfeld|Baden,Wettingen,Lenzburg,Brugg,Wohlen,Zofingen
+Luzern|Zentralschweiz|Gruppe 2|Luzern|Littau,Reussbühl,Würzenbach,Maihof,Tribschen,Wesemlin,Obergrund|Kriens,Emmen,Horw,Sursee,Zug,Cham
+Zürich|Zürich|Gruppe 3|Zürich|Altstetten,Oerlikon,Wiedikon,Schwamendingen,Höngg,Seebach,Wollishofen,Affoltern,Witikon,Hottingen,Wipkingen,Albisrieden|Dübendorf,Uster,Kloten,Dietikon,Wädenswil,Thalwil
+Winterthur|Zürich|Gruppe 3|Winterthur|Töss,Veltheim,Seen,Wülflingen,Oberwinterthur,Mattenbach|Frauenfeld,Bülach,Andelfingen,Effretikon,Wil
+St. Gallen|Ostschweiz|Gruppe 3|St. Gallen|St. Fiden,Bruggen,Lachen,Winkeln,Rotmonten,Neudorf,St. Georgen|Gossau,Rorschach,Herisau,Arbon,Kreuzlingen,Chur
+Lugano|Ticino|Gruppe 3|Ticino|Molino Nuovo,Besso,Cassarate,Viganello,Pregassona,Breganzona,Castagnola|Mendrisio,Chiasso,Locarno,Agno,Biasca`,
+ DEN:`København|Hovedstaden|Øst|København|Nørrebro,Østerbro,Vesterbro,Amager,Valby,Vanløse,Brønshøj,Bispebjerg,Sundby,Frederiksberg,Sydhavn,Husum|Rødovre,Gladsaxe,Glostrup,Gentofte,Ballerup,Albertslund
+Nordsjælland|Hovedstaden|Øst|Nordsjælland|Hillerød Øst,Græsted,Gilleleje,Hornbæk,Espergærde|Hillerød,Helsingør,Frederikssund,Fredensborg,Allerød
+Roskilde|Sjælland|Øst|Sjælland|Himmelev,Svogerslev,Vindinge,Trekroner,Gadstrup|Køge,Holbæk,Næstved,Slagelse,Ringsted,Kalundborg
+Odense|Fyn|Vest|Fyn|Bolbro,Vollsmose,Dalum,Tarup,Hjallese,Bellinge,Højby,Fruens Bøge,Sanderum|Middelfart,Svendborg,Nyborg,Assens,Kerteminde,Faaborg
+Aarhus|Jylland|Vest|Østjylland|Brabrand,Viby,Højbjerg,Risskov,Lystrup,Tilst,Hasle,Skejby,Gellerup,Åbyhøj|Skanderborg,Hinnerup,Odder,Ebeltoft,Grenaa
+Aalborg|Jylland|Vest|Nordjylland|Vejgaard,Nørresundby,Hasseris,Gug,Svenstrup,Vestbyen,Aalborg Øst|Hjørring,Frederikshavn,Brønderslev,Skagen,Thisted
+Esbjerg|Jylland|Vest|Sydvestjylland|Jerne,Hjerting,Gjesing,Kvaglund,Sædding,Tarp|Ribe,Varde,Grindsted,Bramming,Kolding`,
+ CZE:`Praha|Praha|Česká|Praha|Žižkov,Libeň,Smíchov,Karlín,Holešovice,Vinohrady,Nusle,Řepy,Modřany,Čakovice,Uhříněves,Kbely,Strašnice,Stodůlky|Kladno,Beroun,Říčany,Mělník,Brandýs nad Labem,Kolín
+Plzeň|Západní Čechy|Česká|Plzeň|Doubravka,Bory,Slovany,Lochotín,Bolevec,Skvrňany,Litice|Rokycany,Klatovy,Domažlice,Přeštice,Cheb,Karlovy Vary
+Liberec|Severní Čechy|Česká|Liberec|Ruprechtice,Vratislavice,Rochlice,Doubí,Kunratice,Ostašov|Česká Lípa,Turnov,Frýdlant,Tanvald,Ústí nad Labem,Děčín
+Hradec Králové|Východní Čechy|Česká|Hradec Králové|Slezské Předměstí,Kukleby,Malšovice,Plotiště,Pražské Předměstí,Věkoše|Jičín,Náchod,Trutnov,Dvůr Králové,Rychnov,Chrudim
+České Budějovice|Jižní Čechy|Česká|České Budějovice|Suché Vrbné,Rožnov,Mladé,Nové Hodějovice,Čtyři Dvory,Nové Vráto|Tábor,Písek,Strakonice,Jindřichův Hradec,Český Krumlov
+Brno|Jižní Morava|Moravskoslezská|Brno|Líšeň,Žabovřesky,Královo Pole,Bystrc,Židenice,Komín,Medlánky,Slatina,Bohunice,Lesná|Blansko,Vyškov,Hodonín,Znojmo,Břeclav,Kuřim
+Ostrava|Severní Morava|Moravskoslezská|Ostrava|Poruba,Vítkovice,Zábřeh,Hrabůvka,Přívoz,Svinov,Mariánské Hory,Petřkovice|Opava,Havířov,Frýdek-Místek,Třinec,Bohumín,Hlučín
+Olomouc|Střední Morava|Moravskoslezská|Olomouc|Holice,Nová Ulice,Neředín,Hodolany,Řepčín,Nové Sady,Lazce|Prostějov,Přerov,Šternberk,Litovel,Šumperk,Kroměříž`,
+ NOR:`Oslo|Oslo|avdeling 1|Oslo|Grünerløkka,Frogner,Gamle Oslo,Sagene,Nordstrand,Grorud,Stovner,Bjerke,Ullern,Vestre Aker,Holmlia,Furuset,Lambertseter|Asker,Ski,Lørenskog,Jessheim,Nittedal,Drøbak
+Østfold|Viken|avdeling 1|Østfold|Gamlebyen,Kråkerøy,Torp,Gressvik,Lisleby|Moss,Halden,Askim,Mysen,Rygge
+Kristiansand|Agder|avdeling 1|Agder|Vågsbygd,Lund,Grim,Hånes,Tinnheia,Søm,Randesund|Mandal,Arendal,Grimstad,Lillesand,Vennesla,Flekkefjord
+Bergen|Vestland|avdeling 2|Vestland|Fana,Åsane,Laksevåg,Fyllingsdalen,Ytrebygda,Arna,Loddefjord,Sandviken,Nordnes|Os,Askøy,Voss,Knarvik,Stord,Sogndal
+Stavanger|Rogaland|avdeling 2|Rogaland|Hinna,Madla,Hundvåg,Eiganes,Storhaug,Tasta,Hillevåg,Våland|Sandnes,Sola,Bryne,Egersund,Randaberg,Klepp
+Trondheim|Trøndelag|avdeling 2|Trøndelag|Heimdal,Byåsen,Lade,Strindheim,Tiller,Nardo,Kolstad,Charlottenlund,Saupstad|Stjørdal,Steinkjer,Orkanger,Levanger,Melhus,Verdal
+Tromsø|Nord-Norge|avdeling 2|Nord-Norge|Tromsdalen,Kroken,Kvaløysletta,Hamna,Langnes,Breivika,Stakkevollan|Harstad,Finnsnes,Narvik,Alta,Hammerfest,Mo i Rana`,
+ POL:`Warszawa|Mazowieckie|Grupa I|Warszawa|Praga,Mokotów,Wola,Ursynów,Bemowo,Bielany,Targówek,Żoliborz,Ochota,Wawer,Białołęka,Ursus,Wilanów|Pruszków,Legionowo,Piaseczno,Otwock,Grodzisk Mazowiecki,Ząbki
+Gdańsk|Pomorskie|Grupa I|Gdańsk|Wrzeszcz,Oliwa,Przymorze,Zaspa,Orunia,Chełm,Stogi,Nowy Port,Brzeźno|Sopot,Gdynia,Pruszcz Gdański,Tczew,Wejherowo,Kartuzy
+Lublin|Lubelskie|Grupa I|Lublin|Czuby,Kalinowszczyzna,Bronowice,Tatary,Wieniawa,Dziesiąta,Sławin|Świdnik,Puławy,Chełm,Biała Podlaska,Zamość,Kraśnik
+Łódź|Łódzkie|Grupa I|Łódź|Bałuty,Widzew,Górna,Polesie,Retkinia,Teofilów,Chojny,Olechów|Pabianice,Zgierz,Aleksandrów Łódzki,Ozorków,Tomaszów Mazowiecki,Piotrków
+Poznań|Wielkopolskie|Grupa II|Poznań|Jeżyce,Wilda,Grunwald,Rataje,Winogrady,Łazarz,Piątkowo,Junikowo,Naramowice|Swarzędz,Luboń,Gniezno,Środa Wielkopolska,Września,Kalisz
+Szczecin|Zachodniopomorskie|Grupa II|Szczecin|Pogodno,Niebuszewo,Dąbie,Pomorzany,Gumieńce,Warszewo,Żelechowa|Police,Stargard,Goleniów,Gryfino,Świnoujście,Koszalin
+Wrocław|Dolnośląskie|Grupa III|Wrocław|Krzyki,Fabryczna,Psie Pole,Śródmieście,Leśnica,Biskupin,Gaj,Oporów,Kozanów|Oleśnica,Oława,Trzebnica,Świdnica,Legnica,Wałbrzych
+Katowice|Śląskie|Grupa III|Katowice|Szopienice,Ligota,Załęże,Bogucice,Dąb,Giszowiec,Nikiszowiec,Murcki,Brynów|Chorzów,Sosnowiec,Bytom,Tychy,Mysłowice,Ruda Śląska
+Kraków|Małopolskie|Grupa IV|Kraków|Nowa Huta,Podgórze,Krowodrza,Bronowice,Prądnik,Dębniki,Czyżyny,Łagiewniki,Zwierzyniec|Wieliczka,Skawina,Myślenice,Bochnia,Tarnów,Oświęcim
+Rzeszów|Podkarpackie|Grupa IV|Rzeszów|Baranówka,Nowe Miasto,Słocina,Drabinianka,Pobitno,Staroniwa|Łańcut,Dębica,Krosno,Przemyśl,Jarosław,Sanok`,
+ CRO:`Zagreb|Grad Zagreb|Centar|Zagreb|Dubrava,Sesvete,Trešnjevka,Maksimir,Novi Zagreb,Črnomerec,Peščenica,Trnje,Stenjevec,Podsused,Špansko,Jarun,Travno|Samobor,Dugo Selo,Sveta Nedelja,Ivanić-Grad,Jastrebarsko,Zabok
+Varaždin|Sjever|Centar|Varaždin|Banfica,Biškupec,Jalkovec,Kućan Marof,Gornji Kneginec|Čakovec,Ivanec,Ludbreg,Novi Marof,Krapina,Prelog
+Osijek|Slavonija|Istok|Osijek|Retfala,Jug II,Tvrđavica,Donji grad,Gornji grad,Sjenjak,Višnjevac|Đakovo,Valpovo,Našice,Belišće,Beli Manastir,Slavonski Brod
+Rijeka|Primorje-Istra|Zapad|Rijeka|Trsat,Kozala,Krnjevo,Zamet,Pehlin,Turnić,Vežica,Drenova|Opatija,Kastav,Crikvenica,Kostrena,Bakar,Poreč
+Split|Dalmacija|Jug|Split|Žnjan,Pujanke,Sućidar,Kman,Brda,Mertojak,Visoka,Kamen,Lovret|Solin,Kaštela,Trogir,Omiš,Makarska,Sinj
+Zadar|Dalmacija|Jug|Zadar|Borik,Puntamika,Bili Brig,Voštarnica,Smiljevac,Plovanija,Arbanasi|Biograd,Benkovac,Nin,Pag,Obrovac`,
+ UKR:`Kiew|Kiew|Gruppe A|Kiew|Podil,Obolon,Darnyzja,Swjatoschyn,Holossijiw,Solomjanka,Desnjanskyj,Troieschtschyna,Petschersk,Wynohradar,Borschtschahiwka|Browary,Irpin,Butscha,Boryspil,Wyschhorod,Bila Zerkwa
+Lwiw|Westukraine|Gruppe A|Lwiw|Sychiw,Lewandiwka,Pidsamtschtsche,Rjasne,Bohdaniwka,Winnyky,Brjuchowytschi|Drohobytsch,Stryj,Sambir,Tscherwonohrad,Truskawez,Ternopil
+Winnyzja|Zentralukraine|Gruppe A|Winnyzja|Wyschenka,Zamostja,Tjaschyliw,Pjatnytschany,Staryj Misto|Schmerynka,Haissyn,Mohyliw-Podilskyj,Kosjatyn,Chmelnyzkyj
+Odessa|Südukraine|Gruppe B|Odessa|Moldawanka,Peressyp,Tscherjomuschky,Arkadija,Fontan,Slobidka,Tairowa|Tschornomorsk,Piwdenne,Bilhorod-Dnistrowskyj,Ismajil,Mykolajiw
+Charkiw|Ostukraine|Gruppe B|Charkiw|Saltiwka,Cholodna Hora,Nowi Domy,Oleksijiwka,Pjatychatky,Osnowa,Schuriwka|Tschuhujiw,Losowa,Isjum,Merefa,Sumy
+Dnipro|Zentralukraine|Gruppe B|Dnipro|Amur,Tschetscheliwka,Samar,Pridniprowsk,Sokil,Topolja,Peremoha|Kamjanske,Schowti Wody,Pawlohrad,Nikopol,Krementschuk`,
+ SRB:`Beograd|Beograd|Beograd|Beograd|Zemun,Rakovica,Zvezdara,Palilula,Vračar,Banovo Brdo,Žarkovo,Mirijevo,Vidikovac,Borča,Kotež,Dorćol,Senjak|Obrenovac,Mladenovac,Grocka,Smederevo,Barajevo,Sopot
+Novi Sad|Vojvodina|Vojvodina|Južna Bačka|Liman,Detelinara,Podbara,Klisa,Petrovaradin,Grbavica,Sremska Kamenica,Telep|Futog,Bečej,Vrbas,Temerin,Sremski Karlovci,Zrenjanin
+Subotica|Vojvodina|Vojvodina|Severna Bačka|Kertvaroš,Palić,Bajmok,Aleksandrovo,Prozivka,Ker|Sombor,Senta,Kanjiža,Kula,Apatin
+Niš|Istok|Istok|Nišavski okrug|Medijana,Palilula,Pantelej,Crveni Krst,Niška Banja,Duvanište|Aleksinac,Prokuplje,Pirot,Leskovac,Vranje
+Kragujevac|Zapad|Zapad|Šumadija|Aerodrom,Stanovo,Pivara,Bresnica,Erdeč,Bagremar|Jagodina,Ćuprija,Aranđelovac,Paraćin,Topola
+Čačak|Zapad|Zapad|Moravički okrug|Ljubić,Atenica,Konjevići,Preljina,Kulinovci|Kraljevo,Gornji Milanovac,Užice,Požega,Arilje`,
+ SWE:`Stockholm|Stockholm|Norra|Stockholm|Södermalm,Kungsholmen,Vasastan,Östermalm,Farsta,Skärholmen,Vällingby,Hässelby,Spånga,Bagarmossen,Enskede,Älvsjö,Bredäng|Huddinge,Täby,Södertälje,Nacka,Sundbyberg,Järfälla
+Uppsala|Svealand|Norra|Uppland|Gottsunda,Sävja,Gränby,Luthagen,Eriksberg,Stenhagen,Svartbäcken|Enköping,Knivsta,Tierp,Östhammar,Gävle
+Örebro|Svealand|Norra|Örebro län|Varberga,Vivalla,Brickebacken,Baronbackarna,Adolfsberg,Lillån|Kumla,Karlskoga,Lindesberg,Hallsberg,Västerås
+Umeå|Norrland|Norra|Västerbotten|Ersboda,Mariehem,Ålidhem,Teg,Holmsund,Tomtebo|Skellefteå,Örnsköldsvik,Luleå,Piteå,Sundsvall
+Göteborg|Västra Götaland|Södra|Göteborg|Majorna,Lundby,Angered,Frölunda,Kortedala,Biskopsgården,Gamlestaden,Torslanda,Bergsjön,Askim,Kviberg|Mölndal,Kungsbacka,Kungälv,Partille,Lerum,Alingsås
+Malmö|Skåne|Södra|Skåne|Rosengård,Limhamn,Husie,Oxie,Fosie,Kirseberg,Hyllie,Bunkeflo,Möllevången|Lund,Trelleborg,Landskrona,Eslöv,Ystad,Höllviken
+Linköping|Götaland|Södra|Östergötland|Ryd,Skäggetorp,Berga,Lambohov,Johannelund,Hjulsbro|Motala,Mjölby,Finspång,Vadstena,Jönköping`,
+ ISR:`Tel Aviv|Zentrum|Süd|Tel Aviv|Jaffa,Florentin,Ramat Aviv,Hatikva,Neve Sha'anan,Yad Eliyahu,Kfar Shalem,Ezra,Neve Tzedek|Holon,Bat Yam,Ramat Gan,Givatayim,Bnei Brak,Herzliya
+Jerusalem|Jerusalem|Süd|Jerusalem|Katamon,Talpiot,Gilo,Pisgat Ze'ev,Malha,Beit HaKerem,Kiryat Yovel,Musrara,Ramot|Beit Shemesh,Mevaseret Zion,Ma'ale Adumim,Abu Ghosh,Modi'in
+Be'er Sheva|Süden|Süd|Negev|Ramot,Neve Ze'ev,Dalet,Gimel,Vav,Neve Noy|Dimona,Ofakim,Netivot,Sderot,Arad,Eilat
+Haifa|Norden|Nord|Haifa|Hadar,Kiryat Eliezer,Bat Galim,Romema,Ahuza,Kiryat Haim,Neve David|Kiryat Ata,Kiryat Bialik,Nesher,Tirat Carmel,Akko,Nahariya
+Netanya|Scharon|Nord|Scharon|Kiryat Nordau,Ramat Poleg,Neve Itamar,Kiryat Sanz,Ir Yamim|Kfar Yona,Even Yehuda,Pardes Hanna,Ra'anana,Hod HaSharon`,
+ ROU:`București|București|Seria 2|București|Berceni,Militari,Drumul Taberei,Pantelimon,Colentina,Titan,Rahova,Ferentari,Crângași,Floreasca,Tei,Balta Albă|Voluntari,Otopeni,Buftea,Popești-Leordeni,Chiajna,Bragadiru
+Constanța|Dobrogea|Seria 2|Constanța|Tomis,Faleză,Coiciu,Palazu Mare,Inel,Anadalchioi|Mangalia,Medgidia,Năvodari,Ovidiu,Cernavodă,Tulcea
+Iași|Moldova|Seria 1|Iași|Tătărași,Copou,Nicolina,Păcurari,Alexandru cel Bun,Galata,Dacia,Canta|Pașcani,Hârlău,Târgu Frumos,Vaslui,Roman,Suceava
+Cluj-Napoca|Transilvania|Seria 3|Cluj|Mănăștur,Gheorgheni,Mărăști,Grigorescu,Zorilor,Iris,Bulgaria,Someșeni|Turda,Dej,Florești,Câmpia Turzii,Gherla,Bistrița
+Brașov|Transilvania|Seria 3|Brașov|Tractorul,Astra,Bartolomeu,Noua,Schei,Răcădău,Triaj|Codlea,Săcele,Râșnov,Făgăraș,Zărnești,Sighișoara
+Timișoara|Banat|Seria 4|Timiș|Fabric,Iosefin,Elisabetin,Freidorf,Mehala,Ronaț,Fratelia,Plopi|Lugoj,Jimbolia,Sânnicolau Mare,Deta,Reșița,Caransebeș
+Oradea|Crișana|Seria 4|Bihor|Rogerius,Nufărul,Ioșia,Velența,Episcopia Bihor,Grigorescu|Salonta,Beiuș,Marghita,Aleșd,Satu Mare`,
+ HUN:`Budapest|Közép-Magyarország|Északnyugat|Budapest|Csepel,Óbuda,Zugló,Kőbánya,Rákospalota,Pesterzsébet,Budafok,Rákosmente,Soroksár,Pestszentlőrinc,Békásmegyer,Kelenföld|Érd,Gödöllő,Szentendre,Vác,Budaörs,Dunakeszi
+Győr|Nyugat-Dunántúl|Északnyugat|Győr-Moson-Sopron|Adyváros,Marcalváros,Gyárváros,Révfalu,Ménfőcsanak,Pinnyéd,Nádorváros|Mosonmagyaróvár,Sopron,Pápa,Csorna,Tata
+Miskolc|Észak-Magyarország|Északkelet|Borsod|Avas,Hejőcsaba,Szirma,Görömböly,Tapolca,Martintelep,Diósgyőr-Vasgyár|Tiszaújváros,Ózd,Eger,Sajószentpéter,Edelény
+Debrecen|Észak-Alföld|Északkelet|Hajdú-Bihar|Józsa,Nagysándortelep,Tócóvölgy,Csapókert,Kerekestelep,Vénkert|Hajdúböszörmény,Hajdúszoboszló,Balmazújváros,Berettyóújfalu,Nyíradony
+Szeged|Dél-Alföld|Délkelet|Csongrád|Újszeged,Tarján,Rókus,Móraváros,Kiskundorozsma,Szőreg,Felsőváros|Hódmezővásárhely,Makó,Szentes,Kistelek,Mórahalom
+Pécs|Dél-Dunántúl|Délnyugat|Baranya|Uránváros,Kertváros,Meszes,Vasas,Somogy,Hird,Postavölgy|Komló,Mohács,Siklós,Szigetvár,Kaposvár`,
+ CYP:`Nikosia|Nikosia|Nord|Nikosia|Strovolos,Lakatamia,Aglantzia,Latsia,Engomi,Dali,Kaimakli,Pallouriotissa|Tseri,Geri,Kokkinotrimithia,Deftera,Peristerona
+Larnaka|Larnaka|Nord|Larnaka|Livadia,Dromolaxia,Oroklini,Kiti,Meneou,Kamares|Xylofagou,Athienou,Kornos,Lefkara,Pyla
+Famagusta|Ammochostos|Nord|Ammochostos|Ayia Napa,Deryneia,Sotira,Liopetri,Frenaros,Avgorou|Xylotymbou,Ormideia,Vrysoulles,Protaras
+Limassol|Limassol|Süd|Limassol|Agios Athanasios,Kato Polemidia,Germasogeia,Mesa Geitonia,Zakaki,Agios Ioannis,Kapsalos|Episkopi,Erimi,Parekklisia,Pissouri,Moni
+Paphos|Paphos|Süd|Paphos|Geroskipou,Kato Paphos,Empa,Peyia,Tala,Konia|Polis,Kissonerga,Mesogi,Tsada,Kouklia`,
+ BUL:`Sofia|Sofia|Südwest|Sofia|Lyulin,Mladost,Nadezhda,Lozenets,Krasno Selo,Ovcha Kupel,Druzhba,Izgrev,Studentski Grad,Iliyanci,Slatina,Boyana|Pernik,Bozhurishte,Elin Pelin,Samokov,Kostinbrod,Botevgrad
+Plowdiw|Thrakien|Südost|Plowdiw|Trakiya,Kamenitsa,Kyuchuk Parizh,Izgrev,Stolipinovo,Smirnenski,Gagarin|Asenovgrad,Pazardzhik,Rakovski,Karlovo,Stamboliyski
+Burgas|Thrakien|Südost|Burgas|Meden Rudnik,Lazur,Sarafovo,Izgrev,Slaveykov,Vazrazhdane|Pomorie,Sozopol,Nesebar,Aytos,Karnobat,Yambol
+Warna|Nordosten|Nordost|Warna|Asparuhovo,Vladislavovo,Mladost,Chayka,Galata,Vinitsa,Levski|Provadiya,Devnya,Aksakovo,Beloslav,Shumen
+Russe|Nordosten|Nordost|Russe|Druzhba,Zdravets,Charodeyka,Vazrazhdane,Rodina,Tsentar|Byala,Dve Mogili,Silistra,Popovo,Tutrakan
+Plewen|Nordwesten|Nordwest|Plewen|Druzhba,Storgozia,Kaylaka,Shirokiya,Tsentar|Lovech,Cherven Bryag,Levski,Lukovit,Vidin`,
+ SVK:`Bratislava|Bratislava|Bratislava|Bratislava|Petržalka,Ružinov,Dúbravka,Karlova Ves,Rača,Vrakuňa,Podunajské Biskupice,Devínska Nová Ves,Lamač,Vajnory,Nové Mesto,Jarovce|Pezinok,Senec,Malacky,Stupava,Šamorín
+Nitra|Západ|Západ|Nitra|Chrenová,Klokočina,Dražovce,Zobor,Párovce,Janíkovce|Šaľa,Topoľčany,Vráble,Levice,Nové Zámky
+Trenčín|Západ|Západ|Trenčín|Sihoť,Juh,Zámostie,Opatová,Kubra,Zlatovce|Nové Mesto nad Váhom,Dubnica,Púchov,Ilava,Považská Bystrica
+Žilina|Stred|Stred|Žilina|Vlčince,Hájik,Solinky,Bánová,Budatín,Závodie|Martin,Čadca,Kysucké Nové Mesto,Rajec,Bytča
+Banská Bystrica|Stred|Stred|Banská Bystrica|Sásová,Fončorda,Radvaň,Rudlová,Uľanka,Podlavice|Zvolen,Brezno,Detva,Lučenec,Rimavská Sobota
+Košice|Východ|Východ|Košice|Terasa,Sídlisko KVP,Nad jazerom,Šaca,Ťahanovce,Myslava,Barca|Spišská Nová Ves,Rožňava,Moldava nad Bodvou,Bardejov,Humenné`,
+ SVN:`Ljubljana|Osrednjeslovenska|Center|Ljubljana|Bežigrad,Vič,Moste,Polje,Rudnik,Črnuče,Rožna dolina,Fužine,Jarše,Trnovo,Dravlje|Kamnik,Grosuplje,Vrhnika,Medvode,Litija,Logatec
+Kranj|Gorenjska|Center|Gorenjska|Primskovo,Stražišče,Planina,Zlato polje,Kokrica,Struževo|Škofja Loka,Jesenice,Radovljica,Tržič,Bled,Šenčur
+Maribor|Štajerska|Vzhod|Maribor|Tabor,Tezno,Studenci,Pobrežje,Radvanje,Nova vas,Kamnica,Brezje|Slovenska Bistrica,Lenart,Ruše,Rače,Šentilj
+Celje|Savinjska|Vzhod|Savinjska|Hudinja,Gaberje,Ljubečna,Lava,Otok,Dečkovo naselje|Žalec,Šentjur,Laško,Slovenske Konjice,Rogaška Slatina
+Murska Sobota|Pomurje|Vzhod|Pomurje|Rakičan,Černelavci,Bakovci,Pušča,Krog|Beltinci,Ljutomer,Gornja Radgona,Radenci,Odranci
+Koper|Primorska|Zahod|Primorska|Žusterna,Semedela,Markovec,Olmo,Bertoki,Šalara|Izola,Piran,Ankaran,Postojna,Ilirska Bistrica`,
+ IRL:`Dublin Nord|Dublin|Leinster|Dublin|Finglas,Swords,Raheny,Cabra,Blanchardstown,Coolock,Artane,Santry,Glasnevin,Ballymun,Donaghmede|Balbriggan,Malahide,Skerries,Lusk,Rush
+Dublin Süd|Dublin|Leinster|Dublin|Crumlin,Ballyfermot,Clondalkin,Drimnagh,Kimmage,Rathfarnham,Lucan,Ringsend,Ballinteer,Templeogue,Dún Laoghaire|Naas,Greystones,Wicklow,Newbridge,Celbridge
+Kilkenny|Leinster|Leinster|Kilkenny|Loughboy,Newpark,Kennyswell,Gardens,Fr. Hayden Road|Thomastown,Callan,Carlow,Castlecomer,Portlaoise
+Cork|Munster|Munster|Cork|Ballincollig,Blackpool,Douglas,Mahon,Togher,Bishopstown,Mayfield,Glanmire,Ballyphehane|Mallow,Midleton,Youghal,Bandon,Kinsale,Fermoy
+Limerick|Munster|Munster|Limerick|Castletroy,Moyross,Dooradoyle,Raheen,Corbally,Garryowen,Southill|Ennis,Newcastle West,Shannon,Nenagh,Thurles
+Galway|Connacht|Connacht|Galway|Salthill,Knocknacarra,Renmore,Mervue,Ballybane,Shantalla,Newcastle|Tuam,Athenry,Loughrea,Oranmore,Castlebar,Westport
+Letterkenny|Ulster|Ulster|Donegal|Glencar,Oldtown,Ballyraine,Lisnennan,Gortlee|Buncrana,Donegal Town,Ballyshannon,Bundoran,Dungloe,Monaghan`,
+ FIN:`Helsinki|Uusimaa|Etelä|Helsinki|Kallio,Käpylä,Malmi,Vuosaari,Herttoniemi,Pasila,Töölö,Lauttasaari,Kontula,Pukinmäki,Myllypuro,Munkkiniemi,Viikki|Vantaa,Kerava,Järvenpää,Tuusula,Kirkkonummi,Porvoo
+Turku|Varsinais-Suomi|Etelä|Varsinais-Suomi|Runosmäki,Varissuo,Hirvensalo,Nummi,Kupittaa,Martti,Pansio|Raisio,Kaarina,Naantali,Salo,Uusikaupunki,Pori
+Lahti|Päijät-Häme|Etelä|Päijät-Häme|Ahtiala,Mukkula,Liipola,Kiveriö,Laune,Kärpänen|Heinola,Hollola,Orimattila,Nastola,Hämeenlinna
+Tampere|Pirkanmaa|Pohjoinen|Pirkanmaa|Hervanta,Kaleva,Lielahti,Tesoma,Pispala,Linnainmaa,Hervantajärvi|Nokia,Kangasala,Ylöjärvi,Lempäälä,Pirkkala
+Jyväskylä|Keski-Suomi|Pohjoinen|Keski-Suomi|Kortepohja,Huhtasuo,Keltinmäki,Palokka,Vaajakoski,Kuokkala|Jämsä,Äänekoski,Laukaa,Muurame,Kuopio
+Oulu|Pohjois-Pohjanmaa|Pohjoinen|Pohjois-Pohjanmaa|Tuira,Kaakkuri,Pateniemi,Kaukovainio,Toppila,Myllyoja,Kastelli|Kempele,Liminka,Raahe,Haukipudas,Kemi`
+});
+Object.assign(PRO,{
+ SUI:[['Wil','WIL','#E30613','#FFFFFF','p'],['Schaffhausen','SHA','#FFE500','#111111','p'],['Carouge Étoile','ECA','#FFFFFF','#00A650','p'],['Nyon','NYO','#E30613','#FFFFFF','p'],['Rapperswil-Jona','RAP','#E30613','#0055A4','v'],['Kriens','KRI','#111111','#FFFFFF','p'],['Chiasso','CHI','#E30613','#0055A4','v'],['Baden','BAD','#111111','#FFFFFF','p'],['Biel','BIE','#E30613','#FFFFFF','p'],['Köniz','KÖN','#0055A4','#FFFFFF','p'],['Bern Breitenrain','BRE','#111111','#FFFFFF','p'],['Bavois','BAV','#00A650','#FFFFFF','p'],['Delémont','DEL','#E30613','#111111','p'],['Cham','CHA','#E30613','#FFFFFF','p'],['Kreuzlingen','KRE','#0055A4','#FFFFFF','p'],['Wohlen','WOH','#E30613','#FFFFFF','p'],['Bulle','BUL','#E30613','#FFFFFF','p'],['Locarno','LOC','#FFFFFF','#111111','p'],['Grenchen','GRE','#E30613','#FFFFFF','p'],['Zürich Red Star','ZRS','#E30613','#FFFFFF','p']],
+ DEN:[['Kolding','KOL','#0055A4','#FFFFFF','p'],['København B 93','B93','#FFFFFF','#111111','p'],['Køge','KØG','#0055A4','#FFFFFF','p'],['Hillerød','HIL','#E30613','#FFFFFF','p'],['Middelfart','MID','#0055A4','#FFFFFF','p'],['Aarhus Fremad','AAF','#111111','#FFFFFF','p'],['Vendsyssel','VFF','#FFFFFF','#0055A4','p'],['Hellerup','HIK','#5DADE2','#FFFFFF','p'],['Roskilde','ROS','#E30613','#FFFFFF','p'],['Næstved','NÆS','#00A650','#FFFFFF','p'],['Thisted','THI','#5DADE2','#FFFFFF','p'],['Skive','SKI','#0055A4','#FFFFFF','p'],['Brabrand','BRA','#E30613','#FFFFFF','p'],['Gladsaxe AB','AB','#00A650','#FFFFFF','p'],['Amager Fremad','FRA','#5DADE2','#FFFFFF','p'],['Valby Frem','FRE','#E30613','#0055A4','v'],['Odense B 1913','B13','#E30613','#FFFFFF','p'],['Nykøbing','NFC','#E30613','#FFFFFF','p'],['Helsingør','HEL','#E30613','#FFFFFF','p'],['Nordsjælland Ishøj','ISH','#0055A4','#FFFFFF','p']],
+ CZE:[['Prag Dukla','DUK','#FFE500','#8B1A1A','p'],['Tábor','TÁB','#0055A4','#FFFFFF','p'],['Brünn Líšeň','LÍŠ','#00A650','#FFFFFF','p'],['Prostějov','PRO','#0055A4','#FFFFFF','p'],['Vyškov','VYŠ','#E30613','#FFFFFF','p'],['Chrudim','CHR','#0055A4','#FFFFFF','p'],['Opava','OPA','#FFE500','#111111','p'],['Příbram','PŘÍ','#111111','#FFFFFF','p'],['Jihlava','JIH','#0055A4','#E30613','v'],['Ústí','ÚST','#0055A4','#FFFFFF','p'],['Prag Žižkov','ŽIŽ','#E30613','#FFFFFF','p'],['Varnsdorf','VAR','#0055A4','#FFFFFF','p'],['Kroměříž','KRO','#00A650','#FFFFFF','p'],['Vlašim','VLA','#0055A4','#FFFFFF','p'],['Třinec','TŘI','#0055A4','#FFFFFF','p'],['Sokolov','SOK','#0055A4','#FFFFFF','p'],['Most','MOS','#0055A4','#FFFFFF','p'],['Kladno','KLA','#0055A4','#FFFFFF','p'],['Znaim','ZNO','#E30613','#FFFFFF','p'],['Hlučín','HLU','#E30613','#FFFFFF','p']],
+ NOR:[['Ålesund','AAF','#F57F17','#0055A4','p'],['Kristiansand Start','IKS','#FFE500','#111111','p'],['Oslo Lyn','LYN','#E30613','#FFFFFF','p'],['Moss','MOS','#FFE500','#111111','p'],['Kongsvinger','KIL','#E30613','#FFFFFF','p'],['Trondheim Ranheim','RAN','#E30613','#FFFFFF','p'],['Mjøndalen','MIF','#F57F17','#111111','p'],['Sogndal','SOG','#FFFFFF','#111111','p'],['Raufoss','RAU','#0055A4','#FFFFFF','p'],['Ulsteinvik Hødd','HØD','#0055A4','#FFFFFF','p'],['Egersund','EIK','#0055A4','#FFFFFF','p'],['Bergen Åsane','ÅSA','#F57F17','#111111','p'],['Bryne','BRY','#E30613','#FFFFFF','p'],['Levanger','LEV','#FFE500','#111111','p'],['Grimstad Jerv','JER','#FFE500','#111111','p'],['Notodden','NOT','#0055A4','#FFFFFF','p'],['Arendal','ARE','#FFFFFF','#E30613','p'],['Tromsdalen','TUI','#E30613','#FFFFFF','p'],['Sandnes Ulf','ULF','#0055A4','#FFFFFF','p'],['Oslo Skeid','SKE','#E30613','#0055A4','v']],
+ POL:[['Warschau Polonia','POL','#111111','#FFFFFF','p'],['Chorzów Ruch','RUC','#0055A4','#FFFFFF','p'],['Niepołomice','PUS','#00A650','#FFFFFF','p'],['Rzeszów Stal','STR','#0055A4','#FFFFFF','p'],['Legnica Miedź','MIE','#00A650','#0055A4','v'],['Oppeln','ODR','#0055A4','#E30613','p'],['Tychy','GKT','#00A650','#111111','p'],['Pruszków','ZNI','#E30613','#FFFFFF','p'],['Głogów','CHR','#F57F17','#111111','p'],['Mielec','STM','#0055A4','#FFFFFF','p'],['Grodzisk','POG','#00A650','#FFFFFF','p'],['Krakau Wieczysta','WIE','#FFE500','#111111','p'],['Bytom','BYT','#0055A4','#E30613','v'],['Łęczna','ŁĘC','#00A650','#111111','p'],['Posen Warta','WAR','#00A650','#FFFFFF','p'],['Rzeszów Resovia','RES','#E30613','#FFFFFF','p'],['Sosnowiec','ZAG','#00A650','#FFFFFF','p'],['Bielsko-Biała','POD','#E30613','#0055A4','p'],['Nowy Sącz','SAN','#111111','#FFFFFF','p'],['Olsztyn Stomil','STO','#0055A4','#FFFFFF','p']],
+ CRO:[['Zagreb Dubrava','DUB','#0055A4','#FFFFFF','p'],['Zagreb Jarun','JAR','#E30613','#FFFFFF','p'],['Sesvete','SES','#E30613','#0055A4','v'],['Rijeka Orijent','ORI','#E30613','#FFFFFF','p'],['Solin','SOL','#0055A4','#FFFFFF','p'],['Zmijavci','CRZ','#E30613','#FFFFFF','c'],['Bjelovar','BJE','#5DADE2','#FFFFFF','p'],['Jurjevac','ZRI','#00A650','#FFFFFF','p'],['Dugopolje','DUG','#0055A4','#FFFFFF','p'],['Bijelo Brdo','BSK','#0055A4','#FFFFFF','p'],['Zagreb Kustošija','KUS','#00A650','#FFFFFF','p'],['Biograd Primorac','PRI','#0055A4','#FFFFFF','p'],['Ždralovi','MLA','#0055A4','#FFFFFF','p'],['Klis Uskok','USK','#0055A4','#E30613','p'],['Opatija','OPA','#0055A4','#FFFFFF','p'],['Slavonski Brod','MAR','#E30613','#0055A4','v'],['Belišće','BEL','#0055A4','#FFFFFF','p'],['Čakovec','MEĐ','#E30613','#FFFFFF','p'],['Sinj Junak','JUN','#E30613','#FFFFFF','p'],['Dubrovnik','DUB','#0055A4','#E30613','p']],
+ UKR:[['Wolotschysk','AGR','#00A650','#FFFFFF','p'],['Czernowitz','BUK','#111111','#FFFFFF','v'],['Chmelnyzkyj','POD','#E30613','#FFFFFF','p'],['Sumy','VIK','#00A650','#FFFFFF','p'],['Iwano-Frankiwsk','PRY','#0055A4','#FFFFFF','p'],['Mariupol','FEN','#0055A4','#FFFFFF','p'],['Ternopil','NYV','#00A650','#FFFFFF','p'],['Kiew Linkes Ufer','LYB','#0055A4','#FFE500','p'],['Saporischschja','MET','#E30613','#FFFFFF','p'],['Mynai','MYN','#0055A4','#FFFFFF','p'],['Tschernihiw','CHE','#00A650','#FFFFFF','p'],['Krementschuk','KRE','#E30613','#FFFFFF','p'],['Wyschhorod','DIN','#0055A4','#FFFFFF','p'],['Horischni Plawni','HIR','#F57F17','#111111','p'],['Uschhorod','UZH','#0055A4','#FFFFFF','p'],['Mykolajiw','MYK','#FFFFFF','#111111','p'],['Cherson','KHE','#00A650','#FFFFFF','p'],['Winnyzja','NYW','#E30613','#FFFFFF','p'],['Kropywnyzkyj','ZIR','#FFE500','#111111','p'],['Kamjanske','STA','#0055A4','#FFFFFF','p']],
+ SRB:[['Šabac Mačva','MAČ','#FFE500','#111111','v'],['Novi Sad Mladost','MLA','#FFFFFF','#E30613','p'],['Zemun','ZEM','#E30613','#0055A4','v'],['Belgrad Grafičar','GRA','#E30613','#111111','p'],['Ub','JED','#0055A4','#FFFFFF','p'],['Smederevo','SME','#E30613','#FFFFFF','p'],['Užice','SLO','#0055A4','#FFFFFF','p'],['Leskovac','DUB','#00A650','#FFFFFF','p'],['Inđija','INĐ','#E30613','#FFFFFF','p'],['Čačak Borac','BOR','#E30613','#FFFFFF','p'],['Gornji Milanovac','MET','#0055A4','#FFFFFF','p'],['Belgrad Rad','RAD','#0055A4','#FFFFFF','p'],['Vranje','DIN','#0055A4','#FFFFFF','p'],['Loznica','LOZ','#0055A4','#FFFFFF','p'],['Vršac','VRŠ','#E30613','#0055A4','v'],['Sremska Mitrovica','SRM','#E30613','#FFFFFF','p'],['Sombor','SOM','#E30613','#FFFFFF','p'],['Kraljevo Sloga','SLK','#0055A4','#FFFFFF','p'],['Jagodina','JAG','#0055A4','#FFFFFF','p'],['Pirot','PIR','#0055A4','#FFFFFF','p']],
+ SWE:[['Sundsvall','GIF','#0055A4','#FFFFFF','p'],['Borlänge Brage','BRA','#00A650','#FFE500','p'],['Örebro','ÖSK','#FFFFFF','#111111','p'],['Varberg','VAR','#00A650','#FFFFFF','p'],['Göteborg Utsikten','UTS','#0055A4','#FFFFFF','p'],['Trelleborg','TFF','#0055A4','#FFFFFF','p'],['Landskrona','LAN','#FFFFFF','#111111','p'],['Sandviken','SAN','#E30613','#FFFFFF','p'],['Falkenberg','FAL','#FFE500','#111111','p'],['Uddevalla Oddevold','ODD','#0055A4','#FFFFFF','p'],['Östersund','ÖFK','#E30613','#FFFFFF','p'],['Gävle Gefle','GEF','#0055A4','#FFFFFF','p'],['Stockholm Nordic','NOR','#111111','#FFFFFF','p'],['Skövde','SKÖ','#E30613','#FFFFFF','p'],['Umeå','UFC','#FFE500','#111111','p'],['Västerås','VSK','#00A650','#FFFFFF','p'],['Jönköping Södra','JÖN','#E30613','#FFFFFF','p'],['Eskilstuna','AFC','#E30613','#FFFFFF','p'],['Värnamo','IFV','#0055A4','#FFFFFF','p'],['Luleå','LUL','#E30613','#FFFFFF','p']],
+ ISR:[['Ramat Gan','HRG','#E30613','#FFFFFF','p'],['Tel Aviv Hatikva','BNY','#F57F17','#111111','p'],['Herzlia','MHE','#FFE500','#111111','p'],['Nof HaGalil','NOF','#E30613','#FFFFFF','p'],['Afula','AFU','#E30613','#FFFFFF','p'],['Jaffa','JAF','#0055A4','#FFFFFF','p'],['Rischon LeZion','RIS','#E30613','#FFFFFF','p'],['Umm al-Fahm','UMM','#E30613','#FFFFFF','p'],['Akko','AKK','#E30613','#FFFFFF','p'],['Ra’anana','RAA','#FFE500','#0055A4','p'],['Kfar Shalem','KFS','#E30613','#FFFFFF','p'],['Javne','JAV','#FFE500','#0055A4','p'],['Ramat HaScharon','RHS','#E30613','#FFFFFF','p'],['Holon','HOL','#E30613','#FFFFFF','p'],['Aschkelon','ASK','#00A650','#FFFFFF','p'],['Nazareth','NAZ','#00A650','#FFFFFF','p'],['Ganei Tikva','GAN','#0055A4','#FFFFFF','p'],['Eilat','EIL','#0055A4','#FFFFFF','p'],['Kiryat Gat','KGA','#FFE500','#111111','p'],['Rehovot','REH','#E30613','#FFFFFF','p']],
+ ROU:[['Bukarest Armee','STE','#E30613','#0055A4','v'],['Chiajna','CON','#FFE500','#0055A4','p'],['Hunedoara','COR','#0055A4','#FFFFFF','p'],['Târgu Mureș','ASA','#FFE500','#0055A4','p'],['Târgoviște','CHI','#E30613','#FFE500','p'],['Bistrița','GLO','#0055A4','#FFFFFF','p'],['Piatra Neamț','CEA','#111111','#FFFFFF','p'],['Oradea','BIH','#E30613','#0055A4','v'],['Bacău','BAC','#E30613','#0055A4','p'],['Voluntari','VOL','#5B2B82','#FFFFFF','p'],['Târgu Jiu','PAN','#00A650','#111111','p'],['Dumbrăvița','DUM','#0055A4','#FFFFFF','p'],['Timișoara Poli','POL','#5B2B82','#FFFFFF','p'],['Reșița','RES','#E30613','#111111','p'],['Afumați','AFU','#0055A4','#FFFFFF','p'],['Buzău','BUZ','#E30613','#FFFFFF','p'],['Timișoara Ripensia','RIP','#E30613','#FFFFFF','p'],['Satu Mare','OLI','#FFE500','#0055A4','p'],['Baia Mare','MIN','#E30613','#0055A4','p'],['Suceava','SUC','#0055A4','#FFFFFF','p']],
+ HUN:[['Budapest Vasas','VAS','#E30613','#0055A4','v'],['Budafok','BMT','#0055A4','#FFFFFF','p'],['Soroksár','SOR','#00A650','#FFFFFF','p'],['Szeged','SZE','#0055A4','#FFFFFF','p'],['Budapest Zugló','BVS','#0055A4','#FFFFFF','p'],['Kozármisleny','KOZ','#E30613','#FFFFFF','p'],['Ajka','AJK','#0055A4','#FFFFFF','p'],['Tatabánya','TAT','#0055A4','#E30613','p'],['Békéscsaba','BÉK','#5B2B82','#FFFFFF','p'],['Pécs','PMF','#0055A4','#FFFFFF','p'],['Karcag','KAR','#E30613','#FFFFFF','p'],['Szentlőrinc','SZL','#00A650','#FFFFFF','p'],['Csákvár','CSÁ','#0055A4','#FFFFFF','p'],['Gyirmót','GYI','#00A650','#FFFFFF','p'],['Siófok','SIÓ','#0055A4','#FFFFFF','p'],['Budaörs','BUD','#E30613','#FFFFFF','p'],['Dorog','DOR','#E30613','#FFFFFF','p'],['Szolnok','SZO','#0055A4','#FFFFFF','p'],['Sopron','SOP','#E30613','#FFFFFF','p'],['Eger','EGE','#0055A4','#FFFFFF','p']],
+ CYP:[['Morphou Digenis','DIG','#0055A4','#FFFFFF','p'],['Kyrenia PAEEK','PAE','#00A650','#FFFFFF','p'],['Ayia Napa','AYN','#0055A4','#FFFFFF','p'],['Kiti Spartakos','SPA','#E30613','#FFFFFF','p'],['Nisou','MEA','#0055A4','#FFFFFF','p'],['Nikosia 29M','O29','#00A650','#FFFFFF','p'],['Peyia','PEY','#E30613','#FFFFFF','p'],['Lysi','ASI','#0055A4','#FFFFFF','p'],['Gerolakkos','IRA','#E30613','#FFFFFF','p'],['Sotira','ONI','#E30613','#FFFFFF','p'],['Oroklini','DIO','#0055A4','#FFFFFF','p'],['Athienou','OTH','#E30613','#FFFFFF','p'],['Dali Chalkanoras','CHA','#0055A4','#FFFFFF','p'],['Xylotymbou','XYL','#E30613','#FFFFFF','p'],['Ormideia','ORM','#0055A4','#FFFFFF','p'],['Kornos','KOR','#E30613','#FFFFFF','p'],['Lakatamia','LAK','#E30613','#FFFFFF','p'],['Strovolos Elpida','ELP','#0055A4','#FFFFFF','p']],
+ BUL:[['Gabrowo','YAN','#0055A4','#FFFFFF','p'],['Gorna Orjachowiza','LGO','#E30613','#111111','p'],['Warna Fratria','FRA','#0055A4','#FFFFFF','p'],['Petritsch','BEL','#00A650','#FFFFFF','p'],['Dupniza','MAR','#E30613','#FFFFFF','p'],['Plewen','SPP','#00A650','#FFFFFF','p'],['Burgas Tschernomorez','CHB','#5B2B82','#FFFFFF','p'],['Burgas Neftochimik','NEF','#00A650','#FFE500','p'],['Pasardschik','HEB','#0055A4','#FFFFFF','p'],['Swoge','SPS','#E30613','#FFFFFF','p'],['Pernik','MIN','#0055A4','#FFFFFF','p'],['Russe','DUN','#0055A4','#FFFFFF','p'],['Lowetsch','LIT','#0055A4','#FFFFFF','p'],['Radomir','STR','#E30613','#FFFFFF','p'],['Simitli','SEP','#0055A4','#FFFFFF','p'],['Krumowgrad','KRU','#F57F17','#111111','p'],['Sliwen','SLI','#0055A4','#FFFFFF','p'],['Haskowo','HAS','#E30613','#FFFFFF','p'],['Schumen','SHU','#E30613','#FFFFFF','p'],['Jambol','YAM','#E30613','#FFFFFF','p']],
+ SVK:[['Trebišov','TRE','#0055A4','#FFFFFF','p'],['Bratislava Petržalka','PET','#E30613','#FFFFFF','p'],['Liptovský Mikuláš','LIP','#0055A4','#FFFFFF','p'],['Šamorín','ŠAM','#0055A4','#FFFFFF','p'],['Zvolen','ZVO','#0055A4','#FFFFFF','p'],['Púchov','PÚC','#0055A4','#FFFFFF','p'],['Považská Bystrica','POV','#E30613','#FFFFFF','p'],['Spišská Nová Ves','SNV','#00A650','#FFFFFF','p'],['Malženice','MAL','#0055A4','#FFFFFF','p'],['Humenné','HUM','#E30613','#FFFFFF','p'],['Stará Ľubovňa','STĽ','#0055A4','#FFFFFF','p'],['Rimavská Sobota','RIM','#0055A4','#FFFFFF','p'],['Dubnica','DUB','#E30613','#FFFFFF','p'],['Bardejov','BAR','#0055A4','#FFFFFF','p'],['Košice Lokomotíva','LOK','#0055A4','#FFFFFF','p'],['Sereď','SER','#E30613','#FFFFFF','p'],['Rohožník','ROH','#0055A4','#FFFFFF','p'],['Námestovo','NÁM','#E30613','#FFFFFF','p'],['Lučenec','LUČ','#0055A4','#FFFFFF','p'],['Nové Zámky','NZÁ','#00A650','#FFFFFF','p']],
+ SVN:[['Kranj Triglav','TRI','#E30613','#FFFFFF','p'],['Rogaška Slatina','ROG','#E30613','#FFFFFF','p'],['Dekani','JAD','#0055A4','#FFFFFF','p'],['Beltinci','BEL','#E30613','#FFFFFF','p'],['Bilje','BIL','#0055A4','#FFFFFF','p'],['Grosuplje','BRI','#0055A4','#FFFFFF','p'],['Dob','DOB','#E30613','#FFFFFF','p'],['Ljubljana Ilirija','ILI','#00A650','#FFFFFF','p'],['Tolmin','TOL','#0055A4','#FFFFFF','p'],['Slovenska Bistrica','BIS','#0055A4','#FFFFFF','p'],['Ravne','FUŽ','#E30613','#FFFFFF','p'],['Ljubljana Slovan','SLO','#00A650','#FFFFFF','p'],['Brežice','BRE','#E30613','#FFFFFF','p'],['Grad','GRA','#0055A4','#FFFFFF','p'],['Jesenice','JES','#E30613','#FFFFFF','p'],['Šenčur','ŠEN','#0055A4','#FFFFFF','p'],['Zreče','ZRE','#E30613','#FFFFFF','p'],['Škofja Loka','ŠKL','#0055A4','#FFFFFF','p'],['Izola','IZO','#0055A4','#FFFFFF','p'],['Kamnik','KAM','#E30613','#FFFFFF','p']],
+ IRL:[['Limerick Treaty','TRE','#0055A4','#FFFFFF','p'],['Tralee Kerry','KER','#00A650','#FFE500','p'],['Buncrana Cockhill','COC','#00A650','#FFFFFF','h'],['Dublin Crumlin','CRU','#E30613','#FFFFFF','p'],['Cork Rockmount','ROC','#E30613','#FFFFFF','p'],['Cork Ringmahon','RIN','#0055A4','#FFFFFF','p'],['Galway Salthill','SAL','#E30613','#FFFFFF','p'],['Maynooth','MAY','#111111','#FFFFFF','p'],['Dublin Usher','USH','#00A650','#FFFFFF','h'],['Malahide','MAL','#0055A4','#FFFFFF','p'],['Cork College','COL','#E30613','#111111','p'],['Dublin Ballyfermot','BAL','#0055A4','#FFFFFF','p'],['Ennis Town','ENN','#0055A4','#FFFFFF','p'],['Dublin Cherry Orchard','CHO','#E30613','#FFFFFF','p'],['Dublin St Kevin’s','SKB','#0055A4','#FFFFFF','p'],['Sligo Ballisodare','BAL','#E30613','#FFFFFF','p']],
+ FIN:[['Jyväskylä','JJK','#0055A4','#FFFFFF','p'],['Helsinki Käpylä','KÄP','#FFE500','#111111','p'],['Tammisaari Ekenäs','EIF','#E30613','#FFFFFF','p'],['Vantaa','PK35','#111111','#FFFFFF','p'],['Salo','SAL','#0055A4','#FFFFFF','p'],['Järvenpää','JÄP','#E30613','#FFFFFF','p'],['Helsinki Atlantis','ATL','#0055A4','#FFFFFF','p'],['Kouvola MyPa','MYP','#0055A4','#FFFFFF','p'],['Lappeenranta','PEP','#0055A4','#FFFFFF','p'],['Hämeenlinna','FCH','#E30613','#FFFFFF','p'],['Kokkola','KPV','#00A650','#FFFFFF','p'],['Vaasa IFK','VIF','#E30613','#FFFFFF','p'],['Tampere TPV','TPV','#111111','#FFFFFF','p'],['Pori','PPT','#E30613','#FFFFFF','p'],['Joensuu','JIP','#0055A4','#FFFFFF','p'],['Kemi','KEM','#0055A4','#FFFFFF','p'],['Savonlinna','SAV','#0055A4','#FFFFFF','p'],['Kajaani','KAJ','#E30613','#FFFFFF','p'],['Porvoo','POR','#0055A4','#FFFFFF','p'],['Kuopio Akatemia','KUA','#FFE500','#111111','p']]
+});
+
+PYD.BEL.fr=['Wallonie-Bruxelles'];
+
+/* ---------- v67: every country gets its pyramid; a save from before gets the new leagues at once ---------- */
+function pyExtend(){if(!S||S.user==null||!S.py)return;const miss=[];for(let n=0;n<NN();n++)if(pyHas(n)&&!S.py.L.some(L=>L.nat===n))miss.push(n);if(!miss.length)return;
+ const before=S.py.L.length;pyInit();const add=S.py.L.slice(before);if(!S.lg||S.lg.length<=NN())return;
+ const n=leaguePlayed();for(const L of add){for(const id of L.ids){C(id).tier=L.tier}const lg={ids:L.ids.slice(),fx:pyFix(L.ids),pk:L.k};S.lg.push(lg);for(let md=0;md<n;md++)for(const m of lg.fx[md]||[])if(m.hg==null)simMatch({m,comp:'L',n:S.lg.length-1})}}
+{const rs=render;render=function(){try{pyExtend()}catch(e){errLog('Ligapyramide: '+(e&&e.message||e))}return rs.apply(this,arguments)}}
+/* the leagues below the top league are stored compactly: "home,away,goals,goals;…" per match day */
+function lgPack(lg){return{ids:lg.ids,pk:lg.pk,pf:lg.fx.map(r=>r.map(m=>m.h+','+m.a+(m.hg==null?'':','+m.hg+','+m.ag)).join(';'))}}
+function lgUnpack(o){if(!o||!o.pf)return o;o.fx=o.pf.map(s=>s?s.split(';').map(t=>{const v=t.split(',').map(Number);return v.length>2?{h:v[0],a:v[1],hg:v[2],ag:v[3]}:{h:v[0],a:v[1],hg:null,ag:null}}):[]);delete o.pf;return o}
+function lgTag(){if(!S||!S.lg)return;for(const lg of S.lg)if(lg&&lg.pk&&!Object.prototype.hasOwnProperty.call(lg,'toJSON'))Object.defineProperty(lg,'toJSON',{value:function(){return lgPack(this)},enumerable:false,configurable:true})}
+{const l0=load;load=function(){const o=l0();if(o&&Array.isArray(o.lg))o.lg=o.lg.map(lgUnpack);return o}}
+{const pb=pyBuild;pyBuild=function(){const r=pb.apply(this,arguments);lgTag();return r}}
+{const pe=pyExtend;pyExtend=function(){const r=pe.apply(this,arguments);lgTag();return r}}
+{const pe=pyEnsure;pyEnsure=function(){const r=pe.apply(this,arguments);lgTag();return r}}
+{const rs=render;render=function(){if(S&&S.lg&&S.lg.length>NN()&&S.lg[S.lg.length-1]&&!Object.prototype.hasOwnProperty.call(S.lg[S.lg.length-1],'toJSON'))lgTag();return rs.apply(this,arguments)}}
 
 /* ---------- boot ---------- */
 function boot(data){S=(data&&data.S)||load();if(!S)S=newWorld();render()}
